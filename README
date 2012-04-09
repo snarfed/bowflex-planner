@@ -1,0 +1,6 @@
+A webapp that optimizes Bowflex exercise routines to minimize rearranging
+weights and attachments.
+
+Written in Go and deployed on App Engine at:
+
+http://bowflex-planner.appspot.com/
