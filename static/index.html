@@ -5,6 +5,7 @@
 <head>
   <meta http-equiv="content-type" content="text/html; charset=utf-8" />
   <link href="/static/style.css" rel="stylesheet" type="text/css" />
+  <script type="text/javascript" src="static/app.js"></script>
   <title>Bowflex Planner</title>
 </head>
 
@@ -21,21 +22,6 @@
 </p>
 </div>
 
-<script type="text/javascript">
-var next_row_index = 1;
-
-function add_row() {
-  row = document.getElementById("row0").cloneNode(true);
-  STATE: here  
-  document.getElementById("table").appendChild(row);
-}
-
-function delete_row(id) {
-  child = document.getElementById(id);
-  child.parentNode.removeChild(child);
-}
-</script>
-
 <form method="post" target="results" action="/generate">
 <table id="table">
 <tr><th>Name
@@ -46,50 +32,10 @@ function delete_row(id) {
 </th><th>Seat
 </th><th>
 </th></tr>
-
-<tr id="row0">
-<td><input name="name0" type="text">
-</td><td><input name="weight0" type="text" size="3">
-</td><td>
-<select name="arms0">
-  <option value="0">0</input>
-  <option value="1">1</input>
-  <option value="2">2</input>
-  <option value="3">3</input>
-  <option value="4">4</input>
-  <option value="5">5</input>
-  <option value="6">6</input>
-  <option value="7">7</input>
-  <option value="8">8</input>
-  <option value="9">9</input>
-</select>
-</td><td>
-<select name="handles0">
-  <option value="arms">Arms</input>
-  <option value="Outer ground">Outer ground</input>
-  <option value="Inner ground">Inner ground</input>
-  <option value="Lat bar">Lat bar</input>
-</select>
-</td><td>
-<select name="handle_length0">
-  <option value="Short">Short</input>
-  <option value="Long">Long</input>
-</select>
-</td><td>
-<select name="back0">
-  <option value=""></input>
-  <option value="Flat">Flat</input>
-  <option value="Curved">Curved</input>
-</select>
-</td><td>
-<input type="checkbox" name="seat0" value="yes" /> 
-</td><td style="display: none">
-<a href="" onclick="delete_row('row0'); return false">
-  <img src="/static/red_x.png" /></a>
-</td></tr>
+<!-- table row contents are added by add_row() in app.js -->
 </table>
 
-<a href="" onclick="">
+<a href="" onclick="add_row(); return false">
   <img src="/static/green_plus.png" /></a>
 <br />
 <input type="submit" value="Go" />
