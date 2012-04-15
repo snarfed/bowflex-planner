@@ -35,23 +35,28 @@ var ROW_TEMPLATE = '' +
 '</td><td>' +
 '<select name="handles%%">' +
 '  <option value="arms">Arms</input>' +
-'  <option value="Outer ground">Outer ground</input>' +
-'  <option value="Inner ground">Inner ground</input>' +
-'  <option value="Lat bar">Lat bar</input>' +
+'  <option value="outer ground">Outer ground</input>' +
+'  <option value="inner ground">Inner ground</input>' +
+'  <option value="lat bar">Lat bar</input>' +
 '</select>' +
 '</td><td>' +
 '<select name="handle_length%%">' +
-'  <option value="Short">Short</input>' +
-'  <option value="Long">Long</input>' +
+'  <option value="short">Short</input>' +
+'  <option value="long">Long</input>' +
+"  <option value='doesnt_matter'>Doesn't matter</input>" +
 '</select>' +
 '</td><td>' +
 '<select name="back%%">' +
-'  <option value=""></input>' +
-'  <option value="Flat">Flat</input>' +
-'  <option value="Curved">Curved</input>' +
+'  <option value="flat" selected="selected">Flat</input>' +
+'  <option value="curved">Curved</input>' +
+"  <option value='doesnt_matter'>Doesn't matter</input>" +
 '</select>' +
 '</td><td>' +
-'<input type="checkbox" name="seat%%" value="yes" /> ' +
+'<select name="seat%%">' +
+'  <option value="yes" selected="selected">Yes</input>' +
+'  <option value="no">No</input>' +
+"  <option value='doesnt_matter'>Doesn't matter</input>" +
+'</select>' +
 '</td><td>' +
 '<a href="" onclick="delete_row(\'row%%\'); return false">' +
 '  <img src="/static/red_x.png" /></a>' +
