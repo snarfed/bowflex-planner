@@ -1,13 +1,16 @@
+// The complete bowflex-planner App Engine app.
 package app
 
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 )
 
-// possible values for inputs in forms
-var PARAM_VALUES = map[string] map[string] bool {
-	"handles": { "arms": true, "inner ground": true, "lat bar": true,
+// possible values for inputs in forms.
+// TODO: make this a const. go seems to not allow that though?
+var ENUM_PARAM_VALUES = map[string] map[string] bool {
+	"handles": map[string] bool { "arms": true, "inner ground": true, "lat bar": true,
 		"outer ground": true, },
     "handle_length" : { "doesnt_matter": true, "long": true, "short": true, },
     "back": { "doesnt_matter": true, "curved": true, "flat": true, },
@@ -28,19 +31,36 @@ func init() {
 	http.HandleFunc("/generate", generate)
 }
 
+func badParamError(w http.ResponseWriter, param string, value interface{}) {
+	msg := fmt.Sprintf("Bad value %s for parameter %s", value, param)
+	http.Error(w, msg, http.StatusBadRequest)
+}
+
 func generate(w http.ResponseWriter, r *http.Request) {
-	// validate input query parameters
-	bad_param := false
-	for param, expected := range PARAM_VALUES {
+	// parse and validate input query parameters
+	error := false
+
+	for param, expected := range ENUM_PARAM_VALUES {
 		actual := r.FormValue(param)
 		if !expected[actual] {
-			msg := fmt.Sprintf("Bad value '%s' for parameter %s", actual, param)
-			http.Error(w, msg, http.StatusBadRequest)
-			bad_param = true
+			badParamError(w, param, actual)
+			error = true
 		}
 	}
 
-	if bad_param {
+	for _, param := range []string {"weight", "arms"} {
+		val, err := strconv.ParseUint(r.FormValue(param), 0, 0)
+		if err != nil {
+			badParamError(w, param, val)
+			error = true
+		}
+	}
+
+	if r.FormValue("name") == "" {
+		badParamError(w, "name", "''")
+	}
+
+	if error {
 		return
 	}
 }
