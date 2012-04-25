@@ -2,16 +2,24 @@
  * Stylesheet for the front page, mostly the form.
  */
 
-div#description {
-  max-width: 700px;
-}
-
-img#logo {
+div#header {
   float: right;
 }
 
+div#header img {
+  vertical-align: middle;
+}
+
+img#bowflex {
+  margin-top: 1em;
+}
+
+div#description {
+  max-width: 800px;
+}
+
 form {
-  clear: both
+  clear: both;
 }
 
 th, td {
