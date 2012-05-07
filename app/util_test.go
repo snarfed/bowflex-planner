@@ -29,8 +29,15 @@ func TestFactorial(t *testing.T) {
 	}
 }
 
-func Equal(this [][]int, that [][]int) bool {
+func EqualInts(this [][]int, that [][]int) bool {
+	if len(this) != len(that) {
+		return false
+	}
+
 	for i, this_i := range this {
+		if len(this_i) != len(that[i]) {
+			return false
+		}
 		for j, this_i_j := range this_i {
 			if this_i_j != that[i][j] {
 				return false
@@ -45,11 +52,10 @@ func TestPermutations(t *testing.T) {
 		0: [][]int{},
 		1: [][]int{{0}},
 		2: [][]int{{0, 1}, {1, 0}},
-		3: [][]int{{0, 1, 2}, {0, 2, 1}, {1, 0, 2}, {1, 2, 0}, {2, 0, 1}, {2, 1, 0}},
+		3: [][]int{{0, 1, 2}, {1, 0, 2}, {0, 2, 1}, {2, 0, 1}, {1, 2, 0}, {2, 1, 0}},
 	} {
 		perms := Permutations(n)
-		println(perms)
-		if !Equal(perms, expected) {
+		if !EqualInts(perms, expected) {
 			t.Error(n, perms)
 		}
 	}

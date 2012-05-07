@@ -20,35 +20,37 @@ func Factorial(n int) int {
 	return n * Factorial(n-1)
 }
 
-// TODO: write map copy fn and implement recursively by passing down remaining elements
-// actually, use array/slice and -1 as tombstone and fill that in for removed elements
 func Permutations(n int) [][]int {
-	num := Factorial(n)
-	perms := make([][]int, num)
-	for i := range perms {
-		perms[i] = make([]int, n)
+	elems := make([]int, 0, n)
+	for i := n - 1; i >= 0; i-- {
+		elems = append(elems, i)
+	}
+	return perms_helper(elems)
+}
+
+func perms_helper(elems []int) [][]int {
+	// base case
+	if len(elems) == 1 {
+		return [][]int{elems}
 	}
 
-	for j := 0; j < n; j++ {
-		perms[i][j] = (i*n*j/num + j) % n
+	n := len(elems)
+	perms := make([][]int, 0, Factorial(n))
+
+	// recursive step
+	for i, e := range elems {
+		// make a copy of elems with everything except e
+		rest := make([]int, 0, n-1)
+		rest = append(rest, elems[:i]...)
+		if i < n-1 {
+			rest = append(rest, elems[i+1:]...)
+		}
+
+		// populate the n permutations that end with e
+		for _, subperm := range perms_helper(rest) {
+			perms = append(perms, append(subperm, e))
+		}
 	}
 
 	return perms
 }
-
-// var x = []int{3, nil}
-
-// func copy(map[int]
-
-// func Permutations(n int) [][]int {
-// 	num := Factorial(n)
-// 	perms := make([][]int, num)
-// 	for i := range perms {
-// 		perms[i] = make([]int, n)
-// 		for j := 0; j < n; j++ {
-// 			perms[i][j] = (i*n*j/num + j) % n
-// 		}
-// 	}
-
-// 	return perms
-// }

@@ -2,6 +2,7 @@
 //
 // TODO: fan out doesnt_matters to both possibilities. e.g. x => dm => y should
 // cost something but x => dm => x shouldn't.
+// STATE: todos, more min cost tests
 package app
 
 import (
@@ -28,6 +29,12 @@ type Exercise struct {
 	back          string
 	seat          string
 }
+
+func (e *Exercise) String() string {
+	return fmt.Sprint(*e)
+}
+
+type Routine []*Exercise
 
 type Steps map[[2]int]int
 
@@ -74,31 +81,58 @@ func generate(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func min_path(exercises []*Exercise) ([]int, int) {
-	paths := make([]Path, Factorial(len(exercises)))
-	return paths[0].order, paths[0].cost
+func min_path(routine Routine) (Routine, int) {
+	steps := all_steps(routine)
+	n := len(routine)
+	paths := make([]Path, Factorial(n))
+
+	// generate all possible paths and calculate their costs.
+	for i, perm := range Permutations(n) {
+		paths[i].order = perm
+		paths[i].cost = 0
+		for j := 0; j < len(routine)-1; j++ {
+			paths[i].cost += steps[[2]int{perm[j], perm[j+1]}]
+		}
+	}
+
+	// linear search for path with lowest cost. (could use heap.)
+	var min *Path = nil
+	for _, path := range paths {
+		if min == nil || path.cost < min.cost {
+			min = &path
+		}
+	}
+
+	// populate return value
+	min_routine := make(Routine, 0, n)
+	for _, i := range min.order {
+		min_routine = append(min_routine, routine[i])
+	}
+	return min_routine, min.cost
 }
 
-func all_steps(exercises []*Exercise) Steps {
-	steps := make(Steps)
+func all_steps(routine Routine) Steps {
+	n := len(routine)
+	steps := make(Steps, n*n)
 
-	num := len(exercises)
-	if num < 2 {
+	if n < 2 {
 		return steps
 	}
 
-	for i, from := range exercises[:len(exercises)-1] {
-		for j, to := range exercises[i+1:] {
-			steps[[2]int{i, i + j + 1}] = cost(from, to)
+	for i, from := range routine[:len(routine)-1] {
+		for j, to := range routine[i+1:] {
+			ij_cost := cost(from, to)
+			steps[[2]int{i, i + j + 1}] = ij_cost
+			steps[[2]int{i + j + 1, i}] = ij_cost
 		}
 	}
 	return steps
 }
 
-func cost_sum(exercises []*Exercise) int {
+func cost_sum(routine Routine) int {
 	sum := 0
-	for i := 0; i < len(exercises)-1; i++ {
-		sum += cost(exercises[i], exercises[i+1])
+	for i := 0; i < len(routine)-1; i++ {
+		sum += cost(routine[i], routine[i+1])
 	}
 	return sum
 }
@@ -138,4 +172,80 @@ func cost(from *Exercise, to *Exercise) int {
 	}
 
 	return cost
+}
+
+func (this Steps) Equal(that Steps) bool {
+	if len(this) != len(that) {
+		return false
+	}
+
+	for key, val := range this {
+		if val != that[key] {
+			return false
+		}
+	}
+
+	return true
+}
+
+// i originally started to implement Routine as a ring to make this easier, but
+// then thought it would be more complexity overall.
+func (this Routine) Equal(that Routine) bool {
+	if len(this) != len(that) {
+		return false
+	} else if len(this) == 0 {
+		return true
+	}
+
+	return this.equal_ordered(that) || this.equal_ordered(that.Reversed())
+}
+
+func (this Routine) equal_ordered(that Routine) bool {
+	// find the first exercise
+	offset := -1
+	for j, that_j := range that {
+		if this[0] == that_j {
+			offset = j
+			break
+		}
+	}
+	if offset == -1 {
+		return false
+	}
+
+	// // determine direction
+	// offset_prev := offset - 1
+	// if offset_prev < 0 {
+	// 	offset_prev += n
+	// }
+
+	// step := 0
+	// if this[1] == that[(offset+1)%n] {
+	// 	step = 1
+	// } else if this[1] == that[offset_prev] {
+	// 	step = -1
+	// } else {
+	// 	return false
+	// }
+
+	// start there and check the rest of the exercises
+	for i, this_i := range this {
+		// j := (i + offset) % n
+		// if j < 0 {
+		// 	j += n
+		// }
+		if this_i != that[(i+offset)%len(this)] {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (this Routine) Reversed() Routine {
+	reversed := make(Routine, len(this))
+	for i, e := range this {
+		reversed[len(this)-i-1] = e
+	}
+	return reversed
 }
