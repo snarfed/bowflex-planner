@@ -58,23 +58,36 @@ func badParamError(w http.ResponseWriter, param string, value interface{}) {
 }
 
 func generate(w http.ResponseWriter, r *http.Request) {
-	exercises, ok := parse_params(w, r)
-	// fmt.Printf("@ %v %v\n", ok, len(exercises))
+	routine, ok := parse_params(w, r)
+	// fmt.Printf("@ %v %v\n", ok, len(routine))
 	// fmt.Printf("@ %v\n", w.Header())
-	if ok {
-		fmt.Fprintln(w, "<table><tr><th>Name</th><th>Weight</th><th>Arms</th>"+
-			"<th>Handles</th><th>Handle length</th><th>Back</th><th>Seat</th></tr>")
-		for _, e := range exercises {
+	if !ok {
+		return
+	}
+	routines, min, avg, max := min_avg_max(routine)
+
+	fmt.Fprintf(w, "<p>Minimum cost: %v<br />\n", min)
+	fmt.Fprintf(w, "Average cost: %v<br />\n", avg)
+	fmt.Fprintf(w, "Maximum cost: %v<br /></p>\n", max)
+
+	fmt.Fprintf(w, "<p>%v minimum cost path(s):</p>\n", len(routines))
+	fmt.Fprintln(w, "<table><tr><th>Name</th><th>Weight</th><th>Arms</th>"+
+		"<th>Handles</th><th>Handle length</th><th>Back</th><th>Seat</th></tr>")
+	for i, r := range routines {
+		for _, e := range r {
 			fmt.Fprintf(w, "<tr><td>%v</td><td>%v</td><td>%v</td><td>%v</td>"+
-				"<td>%v</td><td>%v</td><td>%v</td></tr>",
+				"<td>%v</td><td>%v</td><td>%v</td></tr>\n",
 				e.name, e.weight, e.arms, e.handles, e.handle_length, e.back, e.seat)
 		}
-		fmt.Fprintln(w, "</table>")
+		if i < len(r)-2 {
+			fmt.Fprintln(w, "<tr><td><b>OR</b></td></tr>")
+		}
 	}
+	fmt.Fprintln(w, "</table>")
 }
 
-func parse_params(w http.ResponseWriter, r *http.Request) ([]*Exercise, bool) {
-	exercises := []*Exercise{}
+func parse_params(w http.ResponseWriter, r *http.Request) (Routine, bool) {
+	routine := Routine{}
 	ok := true
 
 	for i := 1; ; i++ {
@@ -117,10 +130,10 @@ func parse_params(w http.ResponseWriter, r *http.Request) ([]*Exercise, bool) {
 			ok = true
 		}
 
-		exercises = append(exercises, &e)
+		routine = append(routine, &e)
 	}
 
-	return exercises, ok
+	return routine, ok
 }
 
 // Returns the int value of a query parameter. If the parameter is not provided,
@@ -284,41 +297,6 @@ func (this Routine) Equal(that Routine) bool {
 	}
 	return true
 }
-
-// // i originally started to implement Routine as a ring to make this easier, but
-// // then thought it would be more complexity overall.
-// func (this Routine) Equal(that Routine) bool {
-// 	if len(this) != len(that) {
-// 		return false
-// 	} else if len(this) == 0 {
-// 		return true
-// 	}
-
-// 	return this.equal_ordered(that) || this.equal_ordered(that.Reversed())
-// }
-
-// func (this Routine) equal_ordered(that Routine) bool {
-// 	// find the first exercise
-// 	offset := -1
-// 	for j, that_j := range that {
-// 		if this[0] == that_j {
-// 			offset = j
-// 			break
-// 		}
-// 	}
-// 	if offset == -1 {
-// 		return false
-// 	}
-
-// 	// start there and check the rest of the exercises
-// 	for i, this_i := range this {
-// 		if this_i != that[(i+offset)%len(this)] {
-// 			return false
-// 		}
-// 	}
-
-// 	return true
-// }
 
 func (this Routine) Reversed() Routine {
 	reversed := make(Routine, len(this))

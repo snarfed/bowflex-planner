@@ -57,7 +57,7 @@ func TestValidateBadEnumParams(t *testing.T) {
 }
 
 func TestValidateGoodEnumParams(t *testing.T) {
-	generateAndExpect(nil, 0, t)
+	generateAndExpect(nil, 200, t)
 }
 
 func TestCost(t *testing.T) {
