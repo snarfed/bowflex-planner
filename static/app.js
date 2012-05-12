@@ -18,7 +18,27 @@ var next_row_index = 1;
 // %% is the placeholder
 var ROW_TEMPLATE = '' +
 '<td><input name="name%%" type="text">' +
-'</td><td><input name="weight%%" type="text" size="3">' +
+'</td><td>' +
+'<select name="weight%%">' +
+'  <option value="5"> 5 </input>' +
+'  <option value="10">10</input>' +
+'  <option value="15">15</input>' +
+'  <option value="20">20</input>' +
+'  <option value="25">25</input>' +
+'  <option value="30">30</input>' +
+'  <option value="35">35</input>' +
+'  <option value="40">40</input>' +
+'  <option value="45">45</input>' +
+'  <option value="50">50</input>' +
+'  <option value="55">55</input>' +
+'  <option value="60">60</input>' +
+'  <option value="65">65</input>' +
+'  <option value="70">70</input>' +
+'  <option value="75">75</input>' +
+'  <option value="80">80</input>' +
+'  <option value="85">85</input>' +
+'  <option value="90">90</input>' +
+'  <option value="95">95</input>' +
 '</td><td>' +
 '<select name="arms%%">' +
 '  <option value="0">0</input>' +

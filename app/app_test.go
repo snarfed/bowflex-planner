@@ -5,19 +5,19 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	// "strings"
+	"strings"
 	"testing"
 )
 
 // TODO: make this a const. go seems to not allow that though?
 var BASE_PARAMS = url.Values{
-	"name":          {"foo"},
-	"weight":        {"40"},
-	"arms":          {"5"},
-	"handles":       {"arms"},
-	"handle_length": {"long"},
-	"back":          {"flat"},
-	"seat":          {"yes"},
+	"name1":          {"foo"},
+	"weight1":        {"40"},
+	"arms1":          {"5"},
+	"handles1":       {"arms"},
+	"handle_length1": {"long"},
+	"back1":          {"flat"},
+	"seat1":          {"yes"},
 }
 
 // Calls generate and checks the result HTTP code and body.
@@ -39,10 +39,21 @@ func generateAndExpect(params map[string]string, expected_code int, t *testing.T
 
 func TestValidateBadEnumParams(t *testing.T) {
 	for key := range BASE_PARAMS {
-		if key != "name" {
-			generateAndExpect(map[string]string{key: "bad"}, 400, t)
+		val := "bad"
+		if strings.HasPrefix(key, "name") {
+			val = ""
 		}
+		generateAndExpect(map[string]string{key: val}, 400, t)
 	}
+
+	generateAndExpect(map[string]string{"arms1": "-1"}, 400, t)
+	generateAndExpect(map[string]string{"arms1": "10"}, 400, t)
+	generateAndExpect(map[string]string{"arms1": "3.14"}, 400, t)
+
+	generateAndExpect(map[string]string{"weight1": "-5"}, 400, t)
+	generateAndExpect(map[string]string{"weight1": "100"}, 400, t)
+	generateAndExpect(map[string]string{"weight1": "7"}, 400, t)
+	generateAndExpect(map[string]string{"weight1": "3.14"}, 400, t)
 }
 
 func TestValidateGoodEnumParams(t *testing.T) {
@@ -143,42 +154,54 @@ func TestAllSteps(t *testing.T) {
 	}
 }
 
-func TestMinPath(t *testing.T) {
-	routine := Routine{}
-	path, cost := min_path(routine)
-	if !path.Equal(routine) {
-		t.Error(path)
-	} else if cost != 0 {
-		t.Error(cost)
-	}
+func TestMinAvgMax(t *testing.T) {
+	r := Routine{}
+	ExpectMinAvgMax(t, r, []Routine{{}}, 0, 0, 0)
 
-	routine = append(routine,
+	r = append(r,
 		&Exercise{"", 10, 0, "arms", "short", "flat", "yes"})
-	path, cost = min_path(routine)
-	if !path.Equal(routine) {
-		t.Error(path)
-	} else if cost != 0 {
-		t.Error(cost)
-	}
+	ExpectMinAvgMax(t, r, []Routine{r}, 0, 0, 0)
 
-	routine = append(routine,
+	r = append(r,
 		&Exercise{"", 10, 0, "arms", "doesnt_matter", "doesnt_matter", "doesnt_matter"})
-	path, cost = min_path(routine)
-	if !path.Equal(routine) {
-		t.Error(path)
-	} else if cost != 0 {
-		t.Error(cost)
-	}
+	expected := []Routine{r.Reversed()}
+	ExpectMinAvgMax(t, r, expected, 0, 0, 0)
 
 	// weight (3) + arms (1) + handles arms => outer ground (1) == 5
 	// handle length short => long (1) + back (1) + seat (1) == 3
-	routine = append(routine,
+	r = append(r,
 		&Exercise{"", 20, 1, "outer ground", "short", "flat", "yes"},
 		&Exercise{"", 20, 1, "outer ground", "long", "curved", "no"})
-	path, cost = min_path(routine)
-	if !path.Equal(routine) {
-		t.Error(path, cost)
-	} else if cost != 8 {
-		t.Error(cost)
+	expected = []Routine{
+		{r[0], r[1], r[2], r[3]},
+		{r[1], r[0], r[2], r[3]},
+		{r[0], r[1], r[3], r[2]},
+		{r[3], r[2], r[0], r[1]},
+		{r[2], r[3], r[1], r[0]},
+		{r[3], r[2], r[1], r[0]},
+	}
+	ExpectMinAvgMax(t, r, expected, 8, 13, 18)
+
+	// weight (3) + handles => lat_bar (2) == 6
+	// weight (3) + arms (1) + handles <= lat_bar (2) + seat (1) == 7
+	r = append(r,
+		&Exercise{"", 60, 1, "lat_bar", "long", "curved", "no"},
+		&Exercise{"", 10, 2, "outer ground", "long", "doesnt_matter", "yes"})
+	expected = []Routine{
+		{r[4], r[3], r[2], r[0], r[1], r[5]},
+		{r[0], r[1], r[5], r[2], r[3], r[4]},
+		{r[5], r[1], r[0], r[2], r[3], r[4]},
+		{r[4], r[3], r[2], r[5], r[1], r[0]},
+	}
+	ExpectMinAvgMax(t, r, expected, 15, 25, 35)
+}
+
+func ExpectMinAvgMax(t *testing.T, input Routine, expected []Routine,
+	expected_min int, expected_avg int, expected_max int) {
+	paths, min, avg, max := min_avg_max(input)
+	if !RoutinesEqual(paths, expected) {
+		t.Error(expected, paths)
+	} else if min != expected_min || avg != expected_avg || max != expected_max {
+		t.Error(min, avg, max)
 	}
 }

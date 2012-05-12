@@ -2,7 +2,6 @@
 //
 // TODO: fan out doesnt_matters to both possibilities. e.g. x => dm => y should
 // cost something but x => dm => x shouldn't.
-// STATE: todos, more min cost tests
 package app
 
 import (
@@ -11,14 +10,20 @@ import (
 	"strconv"
 )
 
-// possible values for inputs in forms.
-// TODO: make this a const. go seems to not allow that though?
-var ENUM_PARAM_VALUES = map[string]map[string]bool{
-	"handles":       {"arms": true, "inner ground": true, "lat bar": true, "outer ground": true},
-	"handle_length": {"doesnt_matter": true, "long": true, "short": true},
-	"back":          {"doesnt_matter": true, "curved": true, "flat": true},
-	"seat":          {"doesnt_matter": true, "no": true, "yes": true},
-}
+// possible values for enum params
+var WEIGHT_MIN = 0
+var WEIGHT_MAX = 95
+var WEIGHT_STEP = 5
+var ARMS_MIN = 0
+var ARMS_MAX = 9
+var HANDLES_VALUES = map[string]bool{
+	"arms": true, "inner ground": true, "lat bar": true, "outer ground": true}
+var HANDLE_LENGTH_VALUES = map[string]bool{
+	"doesnt_matter": true, "long": true, "short": true}
+var BACK_VALUES = map[string]bool{
+	"doesnt_matter": true, "curved": true, "flat": true}
+var SEAT_VALUES = map[string]bool{
+	"doesnt_matter": true, "no": true, "yes": true}
 
 type Exercise struct {
 	name          string
@@ -48,46 +53,99 @@ func init() {
 }
 
 func badParamError(w http.ResponseWriter, param string, value interface{}) {
-	msg := fmt.Sprintf("Bad value %s for parameter %s", value, param)
+	msg := fmt.Sprintf("Bad value %v for parameter %v", value, param)
 	http.Error(w, msg, http.StatusBadRequest)
 }
 
 func generate(w http.ResponseWriter, r *http.Request) {
-	// parse and validate input query parameters
-	error := false
-
-	for param, expected := range ENUM_PARAM_VALUES {
-		actual := r.FormValue(param)
-		if !expected[actual] {
-			badParamError(w, param, actual)
-			error = true
+	exercises, ok := parse_params(w, r)
+	// fmt.Printf("@ %v %v\n", ok, len(exercises))
+	// fmt.Printf("@ %v\n", w.Header())
+	if ok {
+		fmt.Fprintln(w, "<table><tr><th>Name</th><th>Weight</th><th>Arms</th>"+
+			"<th>Handles</th><th>Handle length</th><th>Back</th><th>Seat</th></tr>")
+		for _, e := range exercises {
+			fmt.Fprintf(w, "<tr><td>%v</td><td>%v</td><td>%v</td><td>%v</td>"+
+				"<td>%v</td><td>%v</td><td>%v</td></tr>",
+				e.name, e.weight, e.arms, e.handles, e.handle_length, e.back, e.seat)
 		}
-	}
-
-	for _, param := range []string{"weight", "arms"} {
-		val, err := strconv.ParseUint(r.FormValue(param), 0, 0)
-		if err != nil {
-			badParamError(w, param, val)
-			error = true
-		}
-	}
-
-	if r.FormValue("name") == "" {
-		badParamError(w, "name", "''")
-	}
-
-	if error {
-		return
+		fmt.Fprintln(w, "</table>")
 	}
 }
 
-func min_path(routine Routine) (Routine, int) {
+func parse_params(w http.ResponseWriter, r *http.Request) ([]*Exercise, bool) {
+	exercises := []*Exercise{}
+	ok := true
+
+	for i := 1; ; i++ {
+		si := strconv.Itoa(i)
+
+		// parse
+		e := Exercise{
+			name:          r.FormValue("name" + si),
+			weight:        int_param("weight"+si, &ok, w, r),
+			arms:          int_param("arms"+si, &ok, w, r),
+			handles:       r.FormValue("handles" + si),
+			handle_length: r.FormValue("handle_length" + si),
+			back:          r.FormValue("back" + si),
+			seat:          r.FormValue("seat" + si),
+		}
+
+		// validate
+		if e.name == "" && e.weight == -1 && e.arms == -1 && e.handles == "" &&
+			e.handle_length == "" && e.back == "" && e.seat == "" {
+			break
+		}
+
+		ok = false
+		if !HANDLES_VALUES[e.handles] {
+			badParamError(w, "handles"+si, e.handles)
+		} else if !HANDLE_LENGTH_VALUES[e.handle_length] {
+			badParamError(w, "handle_length"+si, e.handle_length)
+		} else if !BACK_VALUES[e.back] {
+			badParamError(w, "back"+si, e.back)
+		} else if !SEAT_VALUES[e.seat] {
+			badParamError(w, "seat"+si, e.seat)
+		} else if e.arms < ARMS_MIN || e.arms > ARMS_MAX {
+			badParamError(w, "arms"+si, e.arms)
+		} else if e.weight < WEIGHT_MIN || e.weight > WEIGHT_MAX ||
+			e.weight%WEIGHT_STEP != 0 {
+			badParamError(w, "weight"+si, e.weight)
+		} else if e.name == "" {
+			badParamError(w, "name"+si, "''")
+		} else {
+			ok = true
+		}
+
+		exercises = append(exercises, &e)
+	}
+
+	return exercises, ok
+}
+
+// Returns the int value of a query parameter. If the parameter is not provided,
+// returns -1. If it can't be converted to an integer, sets ok to false.
+func int_param(param string, ok *bool, w http.ResponseWriter, r *http.Request) int {
+	val_str := r.FormValue(param)
+	if val_str == "" {
+		return -1
+	}
+
+	val_int, err := strconv.ParseInt(val_str, 0, 0)
+	if err != nil {
+		badParamError(w, param, val_str)
+		*ok = false
+	}
+	return int(val_int)
+}
+
+// Returns the min cost routine(s) and the mean and max costs.
+func min_avg_max(routine Routine) ([]Routine, int, int, int) {
 	steps := all_steps(routine)
-	n := len(routine)
-	paths := make([]Path, Factorial(n))
+	paths := make([]Path, Factorial(len(routine)))
 
 	// generate all possible paths and calculate their costs.
-	for i, perm := range Permutations(n) {
+	for i, perm := range Permutations(len(routine)) {
 		paths[i].order = perm
 		paths[i].cost = 0
 		for j := 0; j < len(routine)-1; j++ {
@@ -95,20 +153,33 @@ func min_path(routine Routine) (Routine, int) {
 		}
 	}
 
-	// linear search for path with lowest cost. (could use heap.)
-	var min *Path = nil
-	for _, path := range paths {
-		if min == nil || path.cost < min.cost {
-			min = &path
+	// find the min, max, and mean average cost paths
+	var min_paths []*Path = nil
+	min, max, sum := 0, 0, 0
+	for i, path := range paths {
+		sum += path.cost
+		if min == 0 || path.cost < min {
+			min = path.cost
+			// not &path because path is a separate copy and changes
+			min_paths = []*Path{&paths[i]}
+		} else if path.cost == min {
+			min_paths = append(min_paths, &paths[i])
+		}
+		if path.cost > max {
+			max = path.cost
 		}
 	}
+	avg := sum / len(paths)
 
-	// populate return value
-	min_routine := make(Routine, 0, n)
-	for _, i := range min.order {
-		min_routine = append(min_routine, routine[i])
+	// populate min routines
+	min_routines := make([]Routine, len(min_paths))
+	for i, path := range min_paths {
+		min_routines[i] = make(Routine, len(routine))
+		for j, exercise_j := range path.order {
+			min_routines[i][j] = routine[exercise_j]
+		}
 	}
-	return min_routine, min.cost
+	return min_routines, min, avg, max
 }
 
 func all_steps(routine Routine) Steps {
@@ -188,59 +259,66 @@ func (this Steps) Equal(that Steps) bool {
 	return true
 }
 
-// i originally started to implement Routine as a ring to make this easier, but
-// then thought it would be more complexity overall.
-func (this Routine) Equal(that Routine) bool {
+// requires same order
+func RoutinesEqual(this []Routine, that []Routine) bool {
 	if len(this) != len(that) {
 		return false
-	} else if len(this) == 0 {
-		return true
 	}
-
-	return this.equal_ordered(that) || this.equal_ordered(that.Reversed())
-}
-
-func (this Routine) equal_ordered(that Routine) bool {
-	// find the first exercise
-	offset := -1
-	for j, that_j := range that {
-		if this[0] == that_j {
-			offset = j
-			break
-		}
-	}
-	if offset == -1 {
-		return false
-	}
-
-	// // determine direction
-	// offset_prev := offset - 1
-	// if offset_prev < 0 {
-	// 	offset_prev += n
-	// }
-
-	// step := 0
-	// if this[1] == that[(offset+1)%n] {
-	// 	step = 1
-	// } else if this[1] == that[offset_prev] {
-	// 	step = -1
-	// } else {
-	// 	return false
-	// }
-
-	// start there and check the rest of the exercises
 	for i, this_i := range this {
-		// j := (i + offset) % n
-		// if j < 0 {
-		// 	j += n
-		// }
-		if this_i != that[(i+offset)%len(this)] {
+		if !this_i.Equal(that[i]) {
 			return false
 		}
 	}
-
 	return true
 }
+
+// ugh, i want generics
+func (this Routine) Equal(that Routine) bool {
+	if len(this) != len(that) {
+		return false
+	}
+	for i, this_i := range this {
+		if this_i != that[i] {
+			return false
+		}
+	}
+	return true
+}
+
+// // i originally started to implement Routine as a ring to make this easier, but
+// // then thought it would be more complexity overall.
+// func (this Routine) Equal(that Routine) bool {
+// 	if len(this) != len(that) {
+// 		return false
+// 	} else if len(this) == 0 {
+// 		return true
+// 	}
+
+// 	return this.equal_ordered(that) || this.equal_ordered(that.Reversed())
+// }
+
+// func (this Routine) equal_ordered(that Routine) bool {
+// 	// find the first exercise
+// 	offset := -1
+// 	for j, that_j := range that {
+// 		if this[0] == that_j {
+// 			offset = j
+// 			break
+// 		}
+// 	}
+// 	if offset == -1 {
+// 		return false
+// 	}
+
+// 	// start there and check the rest of the exercises
+// 	for i, this_i := range this {
+// 		if this_i != that[(i+offset)%len(this)] {
+// 			return false
+// 		}
+// 	}
+
+// 	return true
+// }
 
 func (this Routine) Reversed() Routine {
 	reversed := make(Routine, len(this))
