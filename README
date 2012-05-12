@@ -4,3 +4,9 @@ weights and attachments.
 Written in Go and deployed on App Engine at:
 
 http://bowflex-planner.appspot.com/
+
+This was the first nontrivial program I wrote in Go (aka golang), mostly as an
+excuse to learn it, so the code isn't particularly pretty and the algorithm
+isn't particularly efficient. It uses dynamic programming to generate the
+individual step costs, but does exhaustive search across all possible exercise
+sequences.
