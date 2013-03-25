@@ -10,3 +10,5 @@ excuse to learn it, so the code isn't particularly pretty and the algorithm
 isn't particularly efficient. It uses dynamic programming to generate the
 individual step costs, but does exhaustive search across all possible exercise
 sequences.
+
+License: This project is placed in the public domain.
